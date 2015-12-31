@@ -4,7 +4,9 @@ import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.BatteryManager;
 import android.os.IBinder;
+import android.text.TextUtils;
 
 public class ReceiverEnablerService extends Service {
     public ReceiverEnablerService() {
@@ -23,7 +25,14 @@ public class ReceiverEnablerService extends Service {
 
         @Override
         public void onReceive(Context context, Intent intent) {
+            if (intent != null) {
+                String action = intent.getAction();
 
+                if (!TextUtils.isEmpty(action) && Intent.ACTION_BATTERY_CHANGED.equals(action)) {
+                    int battLevel = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
+                    BattLevelCaptureService.startCaptureAction(context, battLevel);
+                }
+            }
         }
     }
 }
