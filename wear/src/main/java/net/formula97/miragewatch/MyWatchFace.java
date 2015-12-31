@@ -36,6 +36,9 @@ import android.view.SurfaceHolder;
 import android.view.WindowInsets;
 
 import java.lang.ref.WeakReference;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Locale;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
@@ -44,8 +47,6 @@ import java.util.concurrent.TimeUnit;
  * low-bit ambient mode, the text is drawn without anti-aliasing in ambient mode.
  */
 public class MyWatchFace extends CanvasWatchFaceService {
-    private static final Typeface NORMAL_TYPEFACE =
-            Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL);
 
     /**
      * Update rate in milliseconds for interactive mode. We update once a second since seconds are
@@ -61,6 +62,15 @@ public class MyWatchFace extends CanvasWatchFaceService {
     @Override
     public Engine onCreateEngine() {
         return new Engine();
+    }
+
+    /**
+     * assets/ のフォントファイルをTypefaceに設定する。
+     *
+     * @return 設定するフォントファイルのTypeface
+     */
+    protected Typeface getTypefaceFromAssets() {
+        return Typeface.createFromAsset(getAssets(), "formation_sans_regular.ttf");
     }
 
     private static class EngineHandler extends Handler {
@@ -88,8 +98,11 @@ public class MyWatchFace extends CanvasWatchFaceService {
         boolean mRegisteredTimeZoneReceiver = false;
         Paint mBackgroundPaint;
         Paint mTextPaint;
+        Paint mDatePaint;
+
         boolean mAmbient;
         Time mTime;
+
         final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -101,6 +114,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
 
         float mXOffset;
         float mYOffset;
+        float mDateYOffset;
 
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
@@ -127,6 +141,9 @@ public class MyWatchFace extends CanvasWatchFaceService {
             mTextPaint = new Paint();
             mTextPaint = createTextPaint(resources.getColor(R.color.digital_text));
 
+            mDatePaint = new Paint();
+            mDatePaint = createTextPaint(resources.getColor(R.color.digital_text));
+
             mTime = new Time();
         }
 
@@ -139,7 +156,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
         private Paint createTextPaint(int textColor) {
             Paint paint = new Paint();
             paint.setColor(textColor);
-            paint.setTypeface(NORMAL_TYPEFACE);
+            paint.setTypeface(getTypefaceFromAssets());
             paint.setAntiAlias(true);
             return paint;
         }
@@ -191,8 +208,11 @@ public class MyWatchFace extends CanvasWatchFaceService {
                     ? R.dimen.digital_x_offset_round : R.dimen.digital_x_offset);
             float textSize = resources.getDimension(isRound
                     ? R.dimen.digital_text_size_round : R.dimen.digital_text_size);
+            float dateSize = resources.getDimension(isRound ? R.dimen.date_text_size_round : R.dimen.date_text_size_sq);
+            mDateYOffset = resources.getDimension(R.dimen.date_x_offset_spacing) + mYOffset + dateSize;
 
             mTextPaint.setTextSize(textSize);
+            mDatePaint.setTextSize(dateSize);
         }
 
         @Override
@@ -261,7 +281,13 @@ public class MyWatchFace extends CanvasWatchFaceService {
             String text = mAmbient
                     ? String.format("%d:%02d", mTime.hour, mTime.minute)
                     : String.format("%d:%02d:%02d", mTime.hour, mTime.minute, mTime.second);
+
+            Calendar calendar = Calendar.getInstance();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd (EEE)", Locale.US);
+            String dateTxt = sdf.format(calendar.getTime());
+
             canvas.drawText(text, mXOffset, mYOffset, mTextPaint);
+            canvas.drawText(dateTxt, mXOffset, mDateYOffset, mDatePaint);
         }
 
         /**
