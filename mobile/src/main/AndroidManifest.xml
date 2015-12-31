@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest
-    package="net.formula97.miragewatch"
-    xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest package="net.formula97.miragewatch"
+          xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Required to act as a custom watch face. -->
     <uses-permission android:name="com.google.android.permission.PROVIDE_BACKGROUND"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
 
     <application
+        android:name=".MyApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -20,6 +20,26 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".ReceiverEnablerService"
+            android:enabled="true"
+            android:exported="true"
+            android:process=":receiverEnabler">
+        </service>
+        <service
+            android:name=".WatchdogService"
+            android:enabled="true"
+            android:exported="true"
+            android:process=":watchdog">
+        </service>
+        <service
+            android:name=".BattLevelCaptureService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="net.formula97.miragewatch.ACTION_CAPTURE_BATTERY_STATUS" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>
