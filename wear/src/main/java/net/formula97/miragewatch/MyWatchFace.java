@@ -21,8 +21,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.res.Resources;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
@@ -30,6 +32,7 @@ import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.support.annotation.NonNull;
 import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
 import android.text.format.Time;
@@ -78,12 +81,12 @@ public class MyWatchFace extends CanvasWatchFaceService {
     protected HandRotation getRotation(Time time) {
         HandRotation rotation = new HandRotation();
 
-        float minRotationUnit = 30f * (float) Math.PI;
+        float minRotationUnit = 6f;
         int min = time.minute;
-
-        rotation.setSecondHand(time.second / minRotationUnit);
-        rotation.setMinuteHand(min / minRotationUnit);
-        rotation.setHourHand(((time.hour + (min / 60f)) / 6f) * (float) Math.PI);
+        float hourH = time.hour >= 12 ? (time.hour - 12) * 5f + min / 60f : time.hour * 5 + min / 60f;
+        rotation.setSecondHand(time.second * minRotationUnit);
+        rotation.setMinuteHand(min * minRotationUnit);
+        rotation.setHourHand(hourH * minRotationUnit);
 
         return rotation;
     }
@@ -110,14 +113,15 @@ public class MyWatchFace extends CanvasWatchFaceService {
 
     private class Engine extends CanvasWatchFaceService.Engine {
         final Handler mUpdateTimeHandler = new EngineHandler(this);
+        final int sHandTypeHour = 1;
+        final int sHandTypeMinutes = 2;
+        final int sHandTypeSeconds = 3;
         boolean mRegisteredTimeZoneReceiver = false;
         Paint mBackgroundPaint;
         Paint mClockfacePaint;
         Paint mTextPaint;
-
         Paint mRedClockMarkPaint;
         Paint mYellowClockMarkPaint;
-
         /**
          * 時刻部分のPaint(時間)
          */
@@ -134,10 +138,8 @@ public class MyWatchFace extends CanvasWatchFaceService {
          * 日付部分のPaint
          */
         Paint mDatePaint;
-
         boolean mAmbient;
         Time mTime;
-
         final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -146,11 +148,9 @@ public class MyWatchFace extends CanvasWatchFaceService {
             }
         };
         int mTapCount;
-
         float mXOffset;
         float mYOffset;
         float mDateYOffset;
-
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
          * disable anti-aliasing in ambient mode.
@@ -341,29 +341,6 @@ public class MyWatchFace extends CanvasWatchFaceService {
 
         @Override
         public void onDraw(Canvas canvas, Rect bounds) {
-            // Draw the background.
-//            if (isInAmbientMode()) {
-//                canvas.drawColor(Color.BLACK);
-//            } else {
-//                canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBackgroundPaint);
-//
-//                // 外円の描画
-//                float centerX = bounds.exactCenterX();
-//                float centerY = bounds.exactCenterY();
-//                int halfX = bounds.width() / 2;
-//                int halfY = bounds.height() / 2;
-//                float outerRadius = halfX >= halfY ? (float) halfY : (float) halfX;
-//
-//                Resources resources = MyWatchFace.this.getResources();
-//                float offset = resources.getDimension(R.dimen.inner_clock_face_radius_offset);
-//                float middleRadius = outerRadius - offset;
-//                float innerRadius = middleRadius - offset;
-//
-//                canvas.drawCircle(centerX, centerY, outerRadius, mClockfacePaint);
-//                canvas.drawCircle(centerX, centerY, middleRadius, mClockfacePaint);
-//                canvas.drawCircle(centerX, centerY, innerRadius, mClockfacePaint);
-//            }
-
             drawDigitalFace(canvas, bounds, isInAmbientMode());
         }
 
@@ -505,7 +482,74 @@ public class MyWatchFace extends CanvasWatchFaceService {
             ninePath.close();
             canvas.drawPath(ninePath, mYellowClockMarkPaint);
 
+            // TODO 長針と短針を描画する処理を書く
+            Bitmap hourHandBase = createHand(sHandTypeHour, bounds, Color.CYAN);
+            Bitmap minHandBase = createHand(sHandTypeMinutes, bounds, Color.MAGENTA);
+
+            HandRotation rotation = getRotation(mTime);
+            Matrix hourMatrix = new Matrix();
+            hourMatrix.setRotate(rotation.getHourHand());
+            Bitmap hourHand = Bitmap.createBitmap(hourHandBase,
+                    0, 0, hourHandBase.getWidth(), hourHandBase.getHeight(),
+                    hourMatrix, true);
+
+            Matrix minutesMatrix = new Matrix();
+            minutesMatrix.setRotate(rotation.getMinuteHand());
+            Bitmap minHand = Bitmap.createBitmap(minHandBase,
+                    0, 0, minHandBase.getWidth(), minHandBase.getHeight(),
+                    minutesMatrix, true);
+
+            canvas.drawBitmap(hourHand, 0, 0, null);
+            canvas.drawBitmap(minHand, 0, 0, null);
+
         }
+
+        private Bitmap createHand(int handType, Rect bounds, int color) {
+            Resources res = MyWatchFace.this.getResources();
+            float handWidth = res.getDimension(R.dimen.inner_clock_face_radius_offset);
+
+            // 元のBitmapを作成
+            int bitmapWidth = 0;
+            int bitmapHeight = 0;
+            switch (handType) {
+                case sHandTypeHour:
+                    bitmapWidth = bounds.width() - Math.round(handWidth) * 2;
+                    bitmapHeight = bounds.height() - Math.round(handWidth) * 2;
+                    break;
+                case sHandTypeSeconds:
+                case sHandTypeMinutes:
+                    bitmapWidth = bounds.width() - Math.round(handWidth);
+                    bitmapHeight = bounds.height() - Math.round(handWidth);
+                    break;
+            }
+
+            Bitmap baseHand = Bitmap.createBitmap(bitmapWidth, bitmapHeight, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(baseHand);
+
+            Paint paint = getHandPaint(color);
+
+            Path path = new Path();
+
+            path.moveTo(bitmapWidth / 2, 0);
+            path.lineTo(bitmapWidth - handWidth / 2, handWidth);
+            path.lineTo(handWidth + handWidth / 2, handWidth);
+            path.close();
+
+            canvas.drawPath(path, paint);
+
+            return baseHand;
+        }
+
+        @NonNull
+        private Paint getHandPaint(int color) {
+            Paint paint = new Paint();
+            paint.setAntiAlias(true);
+            paint.setAlpha(0);
+            paint.setColor(color);
+            paint.setStyle(Paint.Style.FILL);
+            return paint;
+        }
+
     }
 
 
