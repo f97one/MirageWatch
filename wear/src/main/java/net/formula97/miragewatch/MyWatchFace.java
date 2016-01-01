@@ -24,6 +24,7 @@ import android.content.res.Resources;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -100,6 +101,10 @@ public class MyWatchFace extends CanvasWatchFaceService {
         Paint mBackgroundPaint;
         Paint mClockfacePaint;
         Paint mTextPaint;
+
+        Paint mRedClockMarkPaint;
+        Paint mYellowClockMarkPaint;
+
         /**
          * 時刻部分のPaint(時間)
          */
@@ -172,6 +177,9 @@ public class MyWatchFace extends CanvasWatchFaceService {
 
             mDatePaint = createTextPaint(digitalTextColor, Paint.Align.CENTER);
 
+            mRedClockMarkPaint = createClockMarkPaint(Color.RED, Paint.Style.FILL);
+            mYellowClockMarkPaint = createClockMarkPaint(Color.YELLOW, Paint.Style.FILL);
+
             mTime = new Time();
         }
 
@@ -191,6 +199,15 @@ public class MyWatchFace extends CanvasWatchFaceService {
             paint.setTypeface(getTypefaceFromAssets());
             paint.setAntiAlias(true);
             paint.setTextAlign(textAlignment);
+            return paint;
+        }
+
+        private Paint createClockMarkPaint(int color, Paint.Style paintStyle) {
+            Paint paint = new Paint();
+            paint.setColor(color);
+            paint.setAntiAlias(true);
+            paint.setStyle(paintStyle);
+
             return paint;
         }
 
@@ -380,8 +397,14 @@ public class MyWatchFace extends CanvasWatchFaceService {
             // Ambientの場合は、背景を真っ黒にする
             if (isAmbient) {
                 canvas.drawColor(Color.BLACK);
+
+                mRedClockMarkPaint.setColor(Color.GRAY);
+                mYellowClockMarkPaint.setColor(Color.GRAY);
             } else {
                 canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBackgroundPaint);
+
+                mRedClockMarkPaint.setColor(Color.RED);
+                mYellowClockMarkPaint.setColor(Color.YELLOW);
             }
 
             // 描画座標の計算
@@ -422,14 +445,68 @@ public class MyWatchFace extends CanvasWatchFaceService {
                 canvas.drawText(":", separatorX, separatorY, mSeparatorPaint);
             }
 
+            // 時間を描画
             canvas.drawText(hh, hourX, hourY, mHourPaint);
             canvas.drawText(mm, minutesX, minutesY, mMinutesPaint);
 
+            // 日付を描画
             Calendar calendar = Calendar.getInstance();
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd (EEE)", Locale.US);
             String dateTxt = sdf.format(calendar.getTime());
 
             canvas.drawText(dateTxt, dateX, dateY, mDatePaint);
+
+            // アナログ部分の描画
+            // 12時
+            Path twelvePath = new Path();
+            float markHeight = res.getDimension(R.dimen.inner_clock_face_radius_offset);
+            float markBase = markHeight / 3f;
+
+            twelvePath.moveTo(centerX, markHeight);
+            twelvePath.lineTo(centerX + markBase, 0);
+            twelvePath.lineTo(centerX - markBase, 0);
+            twelvePath.close();
+            canvas.drawPath(twelvePath, mRedClockMarkPaint);
+
+            // ３時
+            Path threePath = new Path();
+            threePath.moveTo(bounds.width() - markHeight, centerY);
+            threePath.lineTo(bounds.width(), centerY + markBase);
+            threePath.lineTo(bounds.width(), centerY - markBase * 2);
+            threePath.close();
+            canvas.drawPath(threePath, mYellowClockMarkPaint);
+
+            // ６時
+            Path sixPath = new Path();
+            sixPath.moveTo(centerX, bounds.height() - markHeight);
+            sixPath.lineTo(centerX - markBase, bounds.height());
+            sixPath.lineTo(centerX + markBase, bounds.height());
+            sixPath.close();
+            canvas.drawPath(sixPath, mYellowClockMarkPaint);
+
+            // ９時
+            Path ninePath = new Path();
+            ninePath.moveTo(markHeight, centerY);
+            ninePath.lineTo(0, centerY - markBase);
+            ninePath.lineTo(0, centerY + markBase);
+            ninePath.close();
+            canvas.drawPath(ninePath, mYellowClockMarkPaint);
+
         }
     }
+
+    protected HandRotation getRotation(Time time) {
+        HandRotation rotation = new HandRotation();
+
+        float minRotationUnit = 30f * (float) Math.PI;
+        int min = time.minute;
+
+        rotation.setSecondHand(time.second / minRotationUnit);
+        rotation.setMinuteHand(min / minRotationUnit);
+        rotation.setHourHand(((time.hour + (min / 60f)) / 6f) * (float) Math.PI);
+
+        return rotation;
+    }
+
+
 }
