@@ -75,6 +75,19 @@ public class MyWatchFace extends CanvasWatchFaceService {
         return Typeface.createFromAsset(getAssets(), "formation_sans_regular.ttf");
     }
 
+    protected HandRotation getRotation(Time time) {
+        HandRotation rotation = new HandRotation();
+
+        float minRotationUnit = 30f * (float) Math.PI;
+        int min = time.minute;
+
+        rotation.setSecondHand(time.second / minRotationUnit);
+        rotation.setMinuteHand(min / minRotationUnit);
+        rotation.setHourHand(((time.hour + (min / 60f)) / 6f) * (float) Math.PI);
+
+        return rotation;
+    }
+
     private static class EngineHandler extends Handler {
         private final WeakReference<MyWatchFace.Engine> mWeakReference;
 
@@ -472,7 +485,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
             Path threePath = new Path();
             threePath.moveTo(bounds.width() - markHeight, centerY);
             threePath.lineTo(bounds.width(), centerY + markBase);
-            threePath.lineTo(bounds.width(), centerY - markBase * 2);
+            threePath.lineTo(bounds.width(), centerY - markBase);
             threePath.close();
             canvas.drawPath(threePath, mYellowClockMarkPaint);
 
@@ -493,19 +506,6 @@ public class MyWatchFace extends CanvasWatchFaceService {
             canvas.drawPath(ninePath, mYellowClockMarkPaint);
 
         }
-    }
-
-    protected HandRotation getRotation(Time time) {
-        HandRotation rotation = new HandRotation();
-
-        float minRotationUnit = 30f * (float) Math.PI;
-        int min = time.minute;
-
-        rotation.setSecondHand(time.second / minRotationUnit);
-        rotation.setMinuteHand(min / minRotationUnit);
-        rotation.setHourHand(((time.hour + (min / 60f)) / 6f) * (float) Math.PI);
-
-        return rotation;
     }
 
 
