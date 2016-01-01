@@ -24,7 +24,6 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Rect;
@@ -36,6 +35,7 @@ import android.support.annotation.NonNull;
 import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
 import android.text.format.Time;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.SurfaceHolder;
 import android.view.WindowInsets;
@@ -76,19 +76,6 @@ public class MyWatchFace extends CanvasWatchFaceService {
      */
     protected Typeface getTypefaceFromAssets() {
         return Typeface.createFromAsset(getAssets(), "formation_sans_regular.ttf");
-    }
-
-    protected HandRotation getRotation(Time time) {
-        HandRotation rotation = new HandRotation();
-
-        float minRotationUnit = 6f;
-        int min = time.minute;
-        float hourH = time.hour >= 12 ? (time.hour - 12) * 5f + min / 60f : time.hour * 5 + min / 60f;
-        rotation.setSecondHand(time.second * minRotationUnit);
-        rotation.setMinuteHand(min * minRotationUnit);
-        rotation.setHourHand(hourH * minRotationUnit);
-
-        return rotation;
     }
 
     private static class EngineHandler extends Handler {
@@ -341,6 +328,9 @@ public class MyWatchFace extends CanvasWatchFaceService {
 
         @Override
         public void onDraw(Canvas canvas, Rect bounds) {
+            // 現在時刻にアップデートする
+            mTime.setToNow();
+
             drawDigitalFace(canvas, bounds, isInAmbientMode());
         }
 
@@ -376,6 +366,27 @@ public class MyWatchFace extends CanvasWatchFaceService {
             }
         }
 
+        private HandRotation getRotation(Time time) {
+            HandRotation rotation = new HandRotation();
+
+            float minRotationUnit = 360 / 60;
+            int min = time.minute;
+            float hourH = time.hour < 12 ?
+                    (float) time.hour + time.minute / 60f :
+                    (float) (time.hour - 12) + time.minute / 60f;
+
+            rotation.setSecondHand(time.second * minRotationUnit);
+            rotation.setMinuteHand(min * minRotationUnit);
+            rotation.setHourHand(hourH * 5f * minRotationUnit);
+
+            String tag = this.getClass().getSimpleName();
+            Log.d(tag, "時間回転角 = " + String.valueOf(rotation.getHourHand()));
+            Log.d(tag, "分回転角 = " + String.valueOf(rotation.getMinuteHand()));
+            Log.d(tag, "秒回転角 = " + String.valueOf(rotation.getSecondHand()));
+
+            return rotation;
+        }
+
         /**
          * デジタル表示のWatchfaceを描画する。
          *
@@ -384,25 +395,50 @@ public class MyWatchFace extends CanvasWatchFaceService {
          * @param isAmbient Ambientモード時はtrue、そうでない時はfalse
          */
         private void drawDigitalFace(Canvas canvas, Rect bounds, boolean isAmbient) {
-            // Ambientの場合は、背景を真っ黒にする
+            // Ambientの場合は、配色をモノトーンにする
+            int hourHandColor;
+            int minHandColor;
             if (isAmbient) {
                 canvas.drawColor(Color.BLACK);
 
                 mRedClockMarkPaint.setColor(Color.GRAY);
                 mYellowClockMarkPaint.setColor(Color.GRAY);
+
+                hourHandColor = Color.GRAY;
+                minHandColor = Color.GRAY;
             } else {
                 canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBackgroundPaint);
 
                 mRedClockMarkPaint.setColor(Color.RED);
                 mYellowClockMarkPaint.setColor(Color.YELLOW);
-            }
 
-            // 描画座標の計算
+                hourHandColor = Color.CYAN;
+                minHandColor = Color.MAGENTA;
+            }
             // 0. 中心の計算
             float centerX = bounds.exactCenterX();
             float centerY = bounds.exactCenterY();
-            int halfX = bounds.width() / 2;
-            int halfY = bounds.height() / 2;
+            int halfX = bounds.centerX();
+            int halfY = bounds.centerY();
+
+            HandRotation rotation = getRotation(mTime);
+
+            // 短針の描画
+            Bitmap hourHandBase = createHand(sHandTypeHour, bounds, hourHandColor);
+            canvas.save(Canvas.MATRIX_SAVE_FLAG);
+            canvas.rotate(rotation.getHourHand(), halfX, halfY);
+            canvas.drawBitmap(hourHandBase, 0, 0, null);
+
+            canvas.restore();
+
+            // 長針の描画
+            Bitmap minHandBase = createHand(sHandTypeMinutes, bounds, minHandColor);
+            canvas.save(Canvas.MATRIX_SAVE_FLAG);
+            canvas.rotate(rotation.getMinuteHand(), halfX, halfY);
+            canvas.drawBitmap(minHandBase, 0, 0, null);
+            canvas.restore();
+
+            // 描画座標の計算\
             Resources res = MyWatchFace.this.getResources();
             // 時間、分を中心からずらすオフセット
             float offset = mSeparatorPaint.getTextSize() / 4f;
@@ -481,27 +517,6 @@ public class MyWatchFace extends CanvasWatchFaceService {
             ninePath.lineTo(0, centerY + markBase);
             ninePath.close();
             canvas.drawPath(ninePath, mYellowClockMarkPaint);
-
-            // TODO 長針と短針を描画する処理を書く
-            Bitmap hourHandBase = createHand(sHandTypeHour, bounds, Color.CYAN);
-            Bitmap minHandBase = createHand(sHandTypeMinutes, bounds, Color.MAGENTA);
-
-            HandRotation rotation = getRotation(mTime);
-            Matrix hourMatrix = new Matrix();
-            hourMatrix.setRotate(rotation.getHourHand());
-            Bitmap hourHand = Bitmap.createBitmap(hourHandBase,
-                    0, 0, hourHandBase.getWidth(), hourHandBase.getHeight(),
-                    hourMatrix, true);
-
-            Matrix minutesMatrix = new Matrix();
-            minutesMatrix.setRotate(rotation.getMinuteHand());
-            Bitmap minHand = Bitmap.createBitmap(minHandBase,
-                    0, 0, minHandBase.getWidth(), minHandBase.getHeight(),
-                    minutesMatrix, true);
-
-            canvas.drawBitmap(hourHand, 0, 0, null);
-            canvas.drawBitmap(minHand, 0, 0, null);
-
         }
 
         private Bitmap createHand(int handType, Rect bounds, int color) {
@@ -509,30 +524,30 @@ public class MyWatchFace extends CanvasWatchFaceService {
             float handWidth = res.getDimension(R.dimen.inner_clock_face_radius_offset);
 
             // 元のBitmapを作成
-            int bitmapWidth = 0;
-            int bitmapHeight = 0;
+            float offsetX = 0f;
+            float offsetY = 0f;
             switch (handType) {
                 case sHandTypeHour:
-                    bitmapWidth = bounds.width() - Math.round(handWidth) * 2;
-                    bitmapHeight = bounds.height() - Math.round(handWidth) * 2;
+                    offsetX = handWidth * 2f;
+                    offsetY = handWidth * 2f;
                     break;
                 case sHandTypeSeconds:
                 case sHandTypeMinutes:
-                    bitmapWidth = bounds.width() - Math.round(handWidth);
-                    bitmapHeight = bounds.height() - Math.round(handWidth);
+                    offsetX = handWidth;
+                    offsetY = handWidth;
                     break;
             }
 
-            Bitmap baseHand = Bitmap.createBitmap(bitmapWidth, bitmapHeight, Bitmap.Config.ARGB_8888);
+            Bitmap baseHand = Bitmap.createBitmap(bounds.width(), bounds.height(), Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(baseHand);
 
             Paint paint = getHandPaint(color);
 
             Path path = new Path();
 
-            path.moveTo(bitmapWidth / 2, 0);
-            path.lineTo(bitmapWidth - handWidth / 2, handWidth);
-            path.lineTo(handWidth + handWidth / 2, handWidth);
+            path.moveTo(bounds.width() / 2, offsetY);
+            path.lineTo(bounds.width() / 2 - handWidth / 2, offsetY + handWidth);
+            path.lineTo(bounds.width() / 2 + handWidth / 2, offsetY + handWidth);
             path.close();
 
             canvas.drawPath(path, paint);
