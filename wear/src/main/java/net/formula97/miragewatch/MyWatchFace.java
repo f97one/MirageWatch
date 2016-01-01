@@ -32,6 +32,7 @@ import android.os.Message;
 import android.support.wearable.watchface.CanvasWatchFaceService;
 import android.support.wearable.watchface.WatchFaceStyle;
 import android.text.format.Time;
+import android.view.Gravity;
 import android.view.SurfaceHolder;
 import android.view.WindowInsets;
 
@@ -97,7 +98,23 @@ public class MyWatchFace extends CanvasWatchFaceService {
         final Handler mUpdateTimeHandler = new EngineHandler(this);
         boolean mRegisteredTimeZoneReceiver = false;
         Paint mBackgroundPaint;
+        Paint mClockfacePaint;
         Paint mTextPaint;
+        /**
+         * 時刻部分のPaint(時間)
+         */
+        Paint mHourPaint;
+        /**
+         * 時刻部分のPaint(分)
+         */
+        Paint mMinutesPaint;
+        /**
+         * 時刻部分のPaint(セパレータ)
+         */
+        Paint mSeparatorPaint;
+        /**
+         * 日付部分のPaint
+         */
         Paint mDatePaint;
 
         boolean mAmbient;
@@ -127,10 +144,11 @@ public class MyWatchFace extends CanvasWatchFaceService {
             super.onCreate(holder);
 
             setWatchFaceStyle(new WatchFaceStyle.Builder(MyWatchFace.this)
-                    .setCardPeekMode(WatchFaceStyle.PEEK_MODE_VARIABLE)
+                    .setCardPeekMode(WatchFaceStyle.PEEK_MODE_SHORT)
                     .setBackgroundVisibility(WatchFaceStyle.BACKGROUND_VISIBILITY_INTERRUPTIVE)
                     .setShowSystemUiTime(false)
                     .setAcceptsTapEvents(true)
+                    .setStatusBarGravity(Gravity.RIGHT | Gravity.TOP)
                     .build());
             Resources resources = MyWatchFace.this.getResources();
             mYOffset = resources.getDimension(R.dimen.digital_y_offset);
@@ -138,11 +156,21 @@ public class MyWatchFace extends CanvasWatchFaceService {
             mBackgroundPaint = new Paint();
             mBackgroundPaint.setColor(resources.getColor(R.color.background));
 
-            mTextPaint = new Paint();
-            mTextPaint = createTextPaint(resources.getColor(R.color.digital_text));
+            mClockfacePaint = new Paint();
+            mClockfacePaint.setColor(resources.getColor(R.color.clock_face_circle));
+            mClockfacePaint.setStyle(Paint.Style.STROKE);
+            mClockfacePaint.setStrokeWidth(2.0f);
+            mClockfacePaint.setAntiAlias(true);
 
-            mDatePaint = new Paint();
-            mDatePaint = createTextPaint(resources.getColor(R.color.digital_text));
+            int digitalTextColor = resources.getColor(R.color.digital_text);
+
+            mTextPaint = createTextPaint(digitalTextColor);
+
+            mHourPaint = createTextPaint(digitalTextColor, Paint.Align.RIGHT);
+            mMinutesPaint = createTextPaint(digitalTextColor, Paint.Align.LEFT);
+            mSeparatorPaint = createTextPaint(digitalTextColor, Paint.Align.CENTER);
+
+            mDatePaint = createTextPaint(digitalTextColor, Paint.Align.CENTER);
 
             mTime = new Time();
         }
@@ -154,10 +182,15 @@ public class MyWatchFace extends CanvasWatchFaceService {
         }
 
         private Paint createTextPaint(int textColor) {
+            return createTextPaint(textColor, Paint.Align.LEFT);
+        }
+
+        private Paint createTextPaint(int textColor, Paint.Align textAlignment) {
             Paint paint = new Paint();
             paint.setColor(textColor);
             paint.setTypeface(getTypefaceFromAssets());
             paint.setAntiAlias(true);
+            paint.setTextAlign(textAlignment);
             return paint;
         }
 
@@ -202,16 +235,25 @@ public class MyWatchFace extends CanvasWatchFaceService {
             super.onApplyWindowInsets(insets);
 
             // Load resources that have alternate values for round watches.
-            Resources resources = MyWatchFace.this.getResources();
+            Resources res = MyWatchFace.this.getResources();
             boolean isRound = insets.isRound();
-            mXOffset = resources.getDimension(isRound
-                    ? R.dimen.digital_x_offset_round : R.dimen.digital_x_offset);
-            float textSize = resources.getDimension(isRound
+
+            // 時間部分のサイズ
+            float textSize = res.getDimension(isRound
                     ? R.dimen.digital_text_size_round : R.dimen.digital_text_size);
-            float dateSize = resources.getDimension(isRound ? R.dimen.date_text_size_round : R.dimen.date_text_size_sq);
-            mDateYOffset = resources.getDimension(R.dimen.date_x_offset_spacing) + mYOffset + dateSize;
+            // 日付部分のサイズ
+            float dateSize = res.getDimension(isRound ? R.dimen.date_text_size_round : R.dimen.date_text_size_sq);
+
+            mXOffset = res.getDimension(isRound
+                    ? R.dimen.digital_x_offset_round : R.dimen.digital_x_offset);
+            mDateYOffset = res.getDimension(R.dimen.date_x_offset_spacing) + mYOffset + dateSize;
 
             mTextPaint.setTextSize(textSize);
+
+            mHourPaint.setTextSize(textSize);
+            mMinutesPaint.setTextSize(textSize);
+            mSeparatorPaint.setTextSize(textSize);
+
             mDatePaint.setTextSize(dateSize);
         }
 
@@ -270,24 +312,29 @@ public class MyWatchFace extends CanvasWatchFaceService {
         @Override
         public void onDraw(Canvas canvas, Rect bounds) {
             // Draw the background.
-            if (isInAmbientMode()) {
-                canvas.drawColor(Color.BLACK);
-            } else {
-                canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBackgroundPaint);
-            }
+//            if (isInAmbientMode()) {
+//                canvas.drawColor(Color.BLACK);
+//            } else {
+//                canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBackgroundPaint);
+//
+//                // 外円の描画
+//                float centerX = bounds.exactCenterX();
+//                float centerY = bounds.exactCenterY();
+//                int halfX = bounds.width() / 2;
+//                int halfY = bounds.height() / 2;
+//                float outerRadius = halfX >= halfY ? (float) halfY : (float) halfX;
+//
+//                Resources resources = MyWatchFace.this.getResources();
+//                float offset = resources.getDimension(R.dimen.inner_clock_face_radius_offset);
+//                float middleRadius = outerRadius - offset;
+//                float innerRadius = middleRadius - offset;
+//
+//                canvas.drawCircle(centerX, centerY, outerRadius, mClockfacePaint);
+//                canvas.drawCircle(centerX, centerY, middleRadius, mClockfacePaint);
+//                canvas.drawCircle(centerX, centerY, innerRadius, mClockfacePaint);
+//            }
 
-            // Draw H:MM in ambient mode or H:MM:SS in interactive mode.
-            mTime.setToNow();
-            String text = mAmbient
-                    ? String.format("%d:%02d", mTime.hour, mTime.minute)
-                    : String.format("%d:%02d:%02d", mTime.hour, mTime.minute, mTime.second);
-
-            Calendar calendar = Calendar.getInstance();
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd (EEE)", Locale.US);
-            String dateTxt = sdf.format(calendar.getTime());
-
-            canvas.drawText(text, mXOffset, mYOffset, mTextPaint);
-            canvas.drawText(dateTxt, mXOffset, mDateYOffset, mDatePaint);
+            drawDigitalFace(canvas, bounds, isInAmbientMode());
         }
 
         /**
@@ -320,6 +367,69 @@ public class MyWatchFace extends CanvasWatchFaceService {
                         - (timeMs % INTERACTIVE_UPDATE_RATE_MS);
                 mUpdateTimeHandler.sendEmptyMessageDelayed(MSG_UPDATE_TIME, delayMs);
             }
+        }
+
+        /**
+         * デジタル表示のWatchfaceを描画する。
+         *
+         * @param canvas 描画先のCanvas
+         * @param bounds 描画エリア
+         * @param isAmbient Ambientモード時はtrue、そうでない時はfalse
+         */
+        private void drawDigitalFace(Canvas canvas, Rect bounds, boolean isAmbient) {
+            // Ambientの場合は、背景を真っ黒にする
+            if (isAmbient) {
+                canvas.drawColor(Color.BLACK);
+            } else {
+                canvas.drawRect(0, 0, bounds.width(), bounds.height(), mBackgroundPaint);
+            }
+
+            // 描画座標の計算
+            // 0. 中心の計算
+            float centerX = bounds.exactCenterX();
+            float centerY = bounds.exactCenterY();
+            int halfX = bounds.width() / 2;
+            int halfY = bounds.height() / 2;
+            Resources res = MyWatchFace.this.getResources();
+            // 時間、分を中心からずらすオフセット
+            float offset = mSeparatorPaint.getTextSize() / 4f;
+
+            // 1. セパレータ
+            // TextAlignは中央なので、基準点は中央だが、文字サイズだけ上に上げる
+            float separatorX = centerX;
+            float separatorY = centerY;
+
+            // 2. 時刻
+            // TextAlignを右寄せにしているので、基準点は右肩になる
+            float hourX = centerX - offset;
+            float hourY = separatorY;
+
+            // 3. 分
+            // TextAlignは左寄せなので、基準点は左肩
+            float minutesX = centerX + offset;
+            float minutesY = separatorY;
+
+            // 4. 日付
+            float dateX = centerX;
+            float dateY = separatorY + mDatePaint.getTextSize() + res.getDimension(R.dimen.date_x_offset_spacing);
+
+            mTime.setToNow();
+            String hh = String.format(Locale.US, "%02d", mTime.hour);
+            String mm = String.format(Locale.US, "%02d", mTime.minute);
+
+            // セパレータは、秒が偶数、またはAmbientモードのときだけ描画
+            if (mTime.second % 2 == 0 || isAmbient) {
+                canvas.drawText(":", separatorX, separatorY, mSeparatorPaint);
+            }
+
+            canvas.drawText(hh, hourX, hourY, mHourPaint);
+            canvas.drawText(mm, minutesX, minutesY, mMinutesPaint);
+
+            Calendar calendar = Calendar.getInstance();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd (EEE)", Locale.US);
+            String dateTxt = sdf.format(calendar.getTime());
+
+            canvas.drawText(dateTxt, dateX, dateY, mDatePaint);
         }
     }
 }
