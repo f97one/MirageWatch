@@ -3,4 +3,6 @@
     <color name="background">#000000</color>
     <color name="background2">#000088</color>
     <color name="digital_text">#ffffff</color>
+    <color name="clock_face_circle">#c0c0c0</color>
+
 </resources>
