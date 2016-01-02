@@ -14,7 +14,11 @@ import android.text.TextUtils;
 public class WatchdogService extends Service {
 
     public static final String ACTION_START_SHUTDOWN = WatchdogService.class.getName() + ".ACTION_START_SHUTDOWN";
+
     private IBinder mBinder = new WatchdogServiceBinder();
+
+    private boolean mPairBound = false;
+
     /**
      * ReceiverEnablerServiceに接続した時の処理
      */
@@ -26,7 +30,7 @@ public class WatchdogService extends Service {
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-
+            startAndBind();
         }
     };
 
@@ -44,12 +48,20 @@ public class WatchdogService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        return super.onStartCommand(intent, flags, startId);
+        Intent i = new Intent(this, ReceiverEnablerService.class);
+        bindService(i, mReceiverEnablerServiceConnection, BIND_AUTO_CREATE);
+
+        return START_REDELIVER_INTENT;
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
+
+        if (mPairBound) {
+            unbindService(mReceiverEnablerServiceConnection);
+            mPairBound = false;
+        }
     }
 
     @Override
@@ -60,6 +72,18 @@ public class WatchdogService extends Service {
     @Override
     public void onRebind(Intent intent) {
         super.onRebind(intent);
+    }
+
+    private void startAndBind() {
+        if (mPairBound) {
+            unbindService(mReceiverEnablerServiceConnection);
+            mPairBound = false;
+        }
+
+        Intent intent = new Intent(this, ReceiverEnablerService.class);
+        stopService(intent);
+        startService(intent);
+        mPairBound = bindService(intent, mReceiverEnablerServiceConnection, BIND_AUTO_CREATE);
     }
 
     public class WatchdogServiceBinder extends Binder {
@@ -75,8 +99,8 @@ public class WatchdogService extends Service {
             String action = intent.getAction();
 
             if (!TextUtils.isEmpty(action) && action.equals(ACTION_START_SHUTDOWN)) {
-                // TODO 本体ServiceのUnbindを行う
-
+                // 本体ServiceのUnbindを行う
+                unbindService(mReceiverEnablerServiceConnection);
             }
 
         }
