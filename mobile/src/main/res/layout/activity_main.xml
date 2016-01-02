@@ -11,7 +11,62 @@
     tools:context="net.formula97.miragewatch.MainActivity">
 
     <TextView
+        android:id="@+id/caption1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Hello World!"/>
+        android:text="@string/current_battery_level"/>
+
+    <TextView
+        android:id="@+id/batteryLevel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
+        android:layout_toRightOf="@+id/caption1"/>
+
+    <TextView
+        android:id="@+id/percentMark"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="4dp"
+        android:layout_toRightOf="@+id/batteryLevel"
+        android:text="%"/>
+
+    <TextView
+        android:id="@+id/caption2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/caption1"
+        android:text="@string/caption_current_service_condition"/>
+
+    <TextView
+        android:id="@+id/currentCondition"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/caption1"
+        android:layout_marginStart="4dp"
+        android:layout_toRightOf="@id/caption2"
+        android:text="@string/running"/>
+
+    <CheckBox
+        android:id="@+id/enableOnBoot"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/caption2"
+        android:text="@string/caption_enable_on_boot"/>
+
+    <TextView
+        android:id="@+id/descOnBoot"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/enableOnBoot"/>
+
+    <Button
+        android:id="@+id/startServiceBtn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/descOnBoot"
+        android:text="@string/start_service"
+        />
+
+
 </RelativeLayout>
