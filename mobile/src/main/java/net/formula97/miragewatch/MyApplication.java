@@ -8,22 +8,23 @@ import android.preference.PreferenceManager;
  * Created by f97one on 15/12/31.
  */
 public class MyApplication extends Application {
+    /**
+     * バッテリーレベルをPreferenceに永続化するときのキー
+     */
+    private final String mPrefKeyBatteryLevel = "mPrefKeyBatteryLevel";
+    /**
+     * 現在のバッテリーレベル
+     */
+    private int mCurrentRemainLevel;
+    private boolean mSentBatteryLevel;
+
     @Override
     public void onCreate() {
         super.onCreate();
 
         mCurrentRemainLevel = -1;
+        mSentBatteryLevel = false;
     }
-
-    /**
-     * 現在のバッテリーレベル
-     */
-    private int mCurrentRemainLevel;
-
-    /**
-     * バッテリーレベルをPreferenceに永続化するときのキー
-     */
-    private final String mPrefKeyBatteryLevel = "mPrefKeyBatteryLevel";
 
     /**
      * 保存されている残存バッテリーレベルを取得する。
@@ -49,12 +50,19 @@ public class MyApplication extends Application {
         mCurrentRemainLevel = currentRemainLevel;
     }
 
-
     public void storeBattLevel() {
         SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
         SharedPreferences.Editor editor = pref.edit();
 
         editor.putInt(mPrefKeyBatteryLevel, mCurrentRemainLevel);
         editor.apply();
+    }
+
+    public boolean isSentBatteryLevel() {
+        return mSentBatteryLevel;
+    }
+
+    public void setSentBatteryLevel(boolean mSentBatteryLevel) {
+        this.mSentBatteryLevel = mSentBatteryLevel;
     }
 }
