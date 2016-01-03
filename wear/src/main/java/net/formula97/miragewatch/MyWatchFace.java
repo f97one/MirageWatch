@@ -105,8 +105,6 @@ public class MyWatchFace extends CanvasWatchFaceService {
         final int sHandTypeSeconds = 3;
         boolean mRegisteredTimeZoneReceiver = false;
         Paint mBackgroundPaint;
-        Paint mClockfacePaint;
-        Paint mTextPaint;
         Paint mRedClockMarkPaint;
         Paint mYellowClockMarkPaint;
         /**
@@ -135,9 +133,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
             }
         };
         int mTapCount;
-        float mXOffset;
-        float mYOffset;
-        float mDateYOffset;
+
         /**
          * Whether the display supports fewer bits for each color in ambient mode. When true, we
          * disable anti-aliasing in ambient mode.
@@ -156,20 +152,11 @@ public class MyWatchFace extends CanvasWatchFaceService {
                     .setStatusBarGravity(Gravity.RIGHT | Gravity.TOP)
                     .build());
             Resources resources = MyWatchFace.this.getResources();
-            mYOffset = resources.getDimension(R.dimen.digital_y_offset);
 
             mBackgroundPaint = new Paint();
             mBackgroundPaint.setColor(resources.getColor(R.color.background));
 
-            mClockfacePaint = new Paint();
-            mClockfacePaint.setColor(resources.getColor(R.color.clock_face_circle));
-            mClockfacePaint.setStyle(Paint.Style.STROKE);
-            mClockfacePaint.setStrokeWidth(2.0f);
-            mClockfacePaint.setAntiAlias(true);
-
             int digitalTextColor = resources.getColor(R.color.digital_text);
-
-            mTextPaint = createTextPaint(digitalTextColor);
 
             mHourPaint = createTextPaint(digitalTextColor, Paint.Align.RIGHT);
             mMinutesPaint = createTextPaint(digitalTextColor, Paint.Align.LEFT);
@@ -261,12 +248,6 @@ public class MyWatchFace extends CanvasWatchFaceService {
             // 日付部分のサイズ
             float dateSize = res.getDimension(isRound ? R.dimen.date_text_size_round : R.dimen.date_text_size_sq);
 
-            mXOffset = res.getDimension(isRound
-                    ? R.dimen.digital_x_offset_round : R.dimen.digital_x_offset);
-            mDateYOffset = res.getDimension(R.dimen.date_x_offset_spacing) + mYOffset + dateSize;
-
-            mTextPaint.setTextSize(textSize);
-
             mHourPaint.setTextSize(textSize);
             mMinutesPaint.setTextSize(textSize);
             mSeparatorPaint.setTextSize(textSize);
@@ -292,7 +273,9 @@ public class MyWatchFace extends CanvasWatchFaceService {
             if (mAmbient != inAmbientMode) {
                 mAmbient = inAmbientMode;
                 if (mLowBitAmbient) {
-                    mTextPaint.setAntiAlias(!inAmbientMode);
+                    mHourPaint.setAntiAlias(!inAmbientMode);
+                    mMinutesPaint.setAntiAlias(!inAmbientMode);
+                    mDatePaint.setAntiAlias(!inAmbientMode);
                 }
                 invalidate();
             }
@@ -331,7 +314,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
             // 現在時刻にアップデートする
             mTime.setToNow();
 
-            drawDigitalFace(canvas, bounds, isInAmbientMode());
+            drawDigitalFace(canvas, bounds);
         }
 
         /**
@@ -392,13 +375,12 @@ public class MyWatchFace extends CanvasWatchFaceService {
          *
          * @param canvas 描画先のCanvas
          * @param bounds 描画エリア
-         * @param isAmbient Ambientモード時はtrue、そうでない時はfalse
          */
-        private void drawDigitalFace(Canvas canvas, Rect bounds, boolean isAmbient) {
+        private void drawDigitalFace(Canvas canvas, Rect bounds) {
             // Ambientの場合は、配色をモノトーンにする
             int hourHandColor;
             int minHandColor;
-            if (isAmbient) {
+            if (isInAmbientMode()) {
                 canvas.drawColor(Color.BLACK);
 
                 mRedClockMarkPaint.setColor(Color.GRAY);
@@ -438,7 +420,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
             canvas.drawBitmap(minHandBase, 0, 0, null);
             canvas.restore();
 
-            // 描画座標の計算\
+            // 描画座標の計算
             Resources res = MyWatchFace.this.getResources();
             // 時間、分を中心からずらすオフセット
             float offset = mSeparatorPaint.getTextSize() / 4f;
@@ -462,12 +444,11 @@ public class MyWatchFace extends CanvasWatchFaceService {
             float dateX = centerX;
             float dateY = separatorY + mDatePaint.getTextSize() + res.getDimension(R.dimen.date_x_offset_spacing);
 
-            mTime.setToNow();
             String hh = String.format(Locale.US, "%02d", mTime.hour);
             String mm = String.format(Locale.US, "%02d", mTime.minute);
 
             // セパレータは、秒が偶数、またはAmbientモードのときだけ描画
-            if (mTime.second % 2 == 0 || isAmbient) {
+            if (mTime.second % 2 == 0 || isInAmbientMode()) {
                 canvas.drawText(":", separatorX, separatorY, mSeparatorPaint);
             }
 
@@ -483,6 +464,22 @@ public class MyWatchFace extends CanvasWatchFaceService {
             canvas.drawText(dateTxt, dateX, dateY, mDatePaint);
 
             // アナログ部分の描画
+            drawBasicAnalogFace(canvas, bounds);
+
+        }
+
+        /**
+         * アナログ文字盤の基礎部分を描画する。
+         *
+         * @param canvas 描画対象のCanvas
+         * @param bounds 描画可能範囲
+         */
+        private void drawBasicAnalogFace(Canvas canvas, Rect bounds) {
+            Resources res = MyWatchFace.this.getResources();
+
+            float centerX = bounds.exactCenterX();
+            float centerY = bounds.exactCenterY();
+
             // 12時
             Path twelvePath = new Path();
             float markHeight = res.getDimension(R.dimen.inner_clock_face_radius_offset);
@@ -519,6 +516,14 @@ public class MyWatchFace extends CanvasWatchFaceService {
             canvas.drawPath(ninePath, mYellowClockMarkPaint);
         }
 
+        /**
+         * アナログ表示用針のBitmapを生成する。
+         *
+         * @param handType 針の種別
+         * @param bounds 描画可能範囲
+         * @param color 描画する色
+         * @return アナログ表示用針のBitmap
+         */
         private Bitmap createHand(int handType, Rect bounds, int color) {
             Resources res = MyWatchFace.this.getResources();
             float handWidth = res.getDimension(R.dimen.inner_clock_face_radius_offset);
@@ -552,6 +557,35 @@ public class MyWatchFace extends CanvasWatchFaceService {
 
             canvas.drawPath(path, paint);
 
+            // Interactiveのときだけサークルを描画する
+            if (!isInAmbientMode()) {
+                float rOffset;
+                if (handType == sHandTypeHour) {
+                    rOffset = handWidth * 2;
+                } else {
+                    rOffset = handWidth;
+                }
+
+                float radius = bounds.centerX() - rOffset;
+
+                // アルファチャネルの設定値
+                int alpha = 0x90;
+
+                // 外周の描画（色はライトグレーで固定）
+                Paint circlePaint = new Paint();
+                circlePaint.setAntiAlias(true);
+                circlePaint.setColor(res.getColor(R.color.clock_face_circle));
+                circlePaint.setAlpha(alpha);
+                circlePaint.setStyle(Paint.Style.STROKE);
+
+                canvas.drawCircle(bounds.centerX(), bounds.centerY(), radius, circlePaint);
+
+                // 内周の描画（色は長針／短針の色と同色）
+                circlePaint.setColor(color);
+                circlePaint.setAlpha(alpha);
+                canvas.drawCircle(bounds.centerX(), bounds.centerY(), radius - handWidth, circlePaint);
+            }
+
             return baseHand;
         }
 
@@ -559,7 +593,6 @@ public class MyWatchFace extends CanvasWatchFaceService {
         private Paint getHandPaint(int color) {
             Paint paint = new Paint();
             paint.setAntiAlias(true);
-            paint.setAlpha(0);
             paint.setColor(color);
             paint.setStyle(Paint.Style.FILL);
             return paint;
