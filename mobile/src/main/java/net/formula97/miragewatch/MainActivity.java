@@ -1,6 +1,7 @@
 package net.formula97.miragewatch;
 
 import android.app.ActivityManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -8,7 +9,9 @@ import android.content.SharedPreferences;
 import android.os.BatteryManager;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
+import android.text.TextUtils;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.TextView;
@@ -62,10 +65,17 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent(this, ReceiverEnablerService.class);
 
         if (mSvcStarted) {
-
+            if (stopService(intent)) {
+                mSvcStarted = false;
+            }
         } else {
-
+            if (startService(intent) != null) {
+                mSvcStarted = true;
+            }
         }
+
+        setServiceCondition();
+        setButtonCaption();
     }
 
     @Override
@@ -83,12 +93,10 @@ public class MainActivity extends AppCompatActivity {
         }
 
         // Service開始状況
-        int runningId = isServiceRunning() ? R.string.running : R.string.stopped;
-        currentCondition.setText(runningId);
+        setServiceCondition();
 
         // ボタンキャプションの初期設定
-        int btnCaptionId = isServiceRunning() ? R.string.stop_service : R.string.start_service;
-        startServiceBtn.setText(btnCaptionId);
+        setButtonCaption();
 
         // チェック状態の復元
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
@@ -96,6 +104,50 @@ public class MainActivity extends AppCompatActivity {
         enableOnBoot.setChecked(checked);
 
         setDescMsg(checked);
+
+        LocalBroadcastManager manager = LocalBroadcastManager.getInstance(getApplicationContext());
+        manager.registerReceiver(mBatteryLevelUpdated, new IntentFilter(BattLevelCaptureService.ACTION_BATTERY_LEVEL_RECEIVED));
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        // バッテリー情報の収集
+        IntentFilter filter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+        Intent batt = registerReceiver(null, filter);
+
+        if (batt != null) {
+            int level = batt.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
+
+            batteryLevel.setText(String.valueOf(level));
+        }
+
+        // Service開始状況
+        setServiceCondition();
+
+        // ボタンキャプションの初期設定
+        setButtonCaption();
+
+        // チェック状態の復元
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        boolean checked = preferences.getBoolean(AppConst.PrefKeys.ENABLE_ON_BOOT, false);
+        enableOnBoot.setChecked(checked);
+
+        setDescMsg(checked);
+
+        LocalBroadcastManager manager = LocalBroadcastManager.getInstance(getApplicationContext());
+        manager.registerReceiver(mBatteryLevelUpdated, new IntentFilter(BattLevelCaptureService.ACTION_BATTERY_LEVEL_RECEIVED));
+    }
+
+    private void setButtonCaption() {
+        int btnCaptionId = isServiceRunning() ? R.string.stop_service : R.string.start_service;
+        startServiceBtn.setText(btnCaptionId);
+    }
+
+    private void setServiceCondition() {
+        int runningId = isServiceRunning() ? R.string.running : R.string.stopped;
+        currentCondition.setText(runningId);
     }
 
     @Override
@@ -108,6 +160,9 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences.Editor editor = preferences.edit();
         editor.putBoolean(AppConst.PrefKeys.ENABLE_ON_BOOT, checked);
         editor.apply();
+
+        LocalBroadcastManager manager = LocalBroadcastManager.getInstance(getApplicationContext());
+        manager.unregisterReceiver(mBatteryLevelUpdated);
     }
 
     private boolean isServiceRunning() {
@@ -124,4 +179,16 @@ public class MainActivity extends AppCompatActivity {
 
         return isRunning;
     }
+
+    private BroadcastReceiver mBatteryLevelUpdated = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+
+            if (!TextUtils.isEmpty(action) && action.equals(BattLevelCaptureService.ACTION_BATTERY_LEVEL_RECEIVED)) {
+                int level = intent.getIntExtra(BattLevelCaptureService.EXTRA_RECEIVED_BATTERY_LEVEL, 0);
+                batteryLevel.setText(String.valueOf(level));
+            }
+        }
+    };
 }
