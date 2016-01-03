@@ -10,5 +10,16 @@ public class HandheldBattLevelReceiverService extends WearableListenerService {
     @Override
     public void onMessageReceived(MessageEvent messageEvent) {
         super.onMessageReceived(messageEvent);
+
+        if (messageEvent.getPath().equals("/BatteryLevel")) {
+            String s = new String(messageEvent.getData());
+
+            MyWearApplication app = (MyWearApplication) getApplication();
+            try {
+                app.setBatteryLevel(Integer.parseInt(s));
+            } catch (NumberFormatException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }
