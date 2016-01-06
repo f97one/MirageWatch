@@ -5,6 +5,7 @@
     <!-- Required to act as a custom watch face. -->
     <uses-permission android:name="com.google.android.permission.PROVIDE_BACKGROUND"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
     <application
         android:name=".MyApplication"
@@ -13,7 +14,6 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-
         <meta-data
             android:name="com.google.android.gms.version"
             android:value="@integer/google_play_services_version"/>
@@ -42,10 +42,18 @@
             android:name=".BattLevelCaptureService"
             android:exported="false">
             <intent-filter>
-                <action android:name="net.formula97.miragewatch.ACTION_CAPTURE_BATTERY_STATUS" />
+                <action android:name="net.formula97.miragewatch.ACTION_CAPTURE_BATTERY_STATUS"/>
             </intent-filter>
         </service>
 
+        <receiver
+            android:name=".StartupReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
