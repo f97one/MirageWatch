@@ -31,26 +31,32 @@ public class BattLevelCaptureService extends IntentService {
     private GoogleApiClient.ConnectionCallbacks mConnectionCallback = new GoogleApiClient.ConnectionCallbacks() {
         @Override
         public void onConnected(Bundle bundle) {
-            MyApplication app = (MyApplication) getApplication();
-            String battLevelString = String.valueOf(app.getCurrentRemainLevel());
 
-            String tag = BattLevelCaptureService.class.getSimpleName();
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    MyApplication app = (MyApplication) getApplication();
+                    String battLevelString = String.valueOf(app.getCurrentRemainLevel());
 
-            NodeApi.GetConnectedNodesResult connectedNodesResult = Wearable.NodeApi.getConnectedNodes(mApiClient).await();
-            for (Node node : connectedNodesResult.getNodes()) {
-                MessageApi.SendMessageResult result = Wearable.MessageApi.sendMessage(
-                        mApiClient,
-                        node.getId(),
-                        "/BatteryLevel",
-                        battLevelString.getBytes())
-                        .await();
+                    String tag = BattLevelCaptureService.class.getSimpleName();
 
-                if (result.getStatus().isSuccess()) {
-                    Log.d(tag, "バッテリーレベルの送信に成功");
-                } else {
-                    Log.d(tag, "バッテリーレベルの送信に失敗 (" + result.getStatus().getStatusMessage() + ")");
+                    NodeApi.GetConnectedNodesResult connectedNodesResult = Wearable.NodeApi.getConnectedNodes(mApiClient).await();
+                    for (Node node : connectedNodesResult.getNodes()) {
+                        MessageApi.SendMessageResult result = Wearable.MessageApi.sendMessage(
+                                mApiClient,
+                                node.getId(),
+                                "/BatteryLevel",
+                                battLevelString.getBytes())
+                                .await();
+
+                        if (result.getStatus().isSuccess()) {
+                            Log.d(tag, "バッテリーレベルの送信に成功");
+                        } else {
+                            Log.d(tag, "バッテリーレベルの送信に失敗 (" + result.getStatus().getStatusMessage() + ")");
+                        }
+                    }
                 }
-            }
+            }).start();
         }
 
         @Override
