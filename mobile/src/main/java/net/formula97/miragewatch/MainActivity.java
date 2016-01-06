@@ -115,6 +115,8 @@ public class MainActivity extends AppCompatActivity {
             batteryLevel.setText(String.valueOf(level));
         }
 
+        mSvcStarted = isServiceRunning();
+
         // Service開始状況
         setServiceCondition();
 
