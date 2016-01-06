@@ -46,15 +46,6 @@
             </intent-filter>
         </service>
 
-        <receiver
-            android:name=".WatchdogService$UnbindTriggerReceiver"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action
-                    android:name="net.formula97.miragewatch.WatchdogService.ACTION_START_SHUTDOWN"/>
-            </intent-filter>
-        </receiver>
     </application>
 
 </manifest>
