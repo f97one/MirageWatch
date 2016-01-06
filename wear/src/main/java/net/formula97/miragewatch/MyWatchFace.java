@@ -123,6 +123,10 @@ public class MyWatchFace extends CanvasWatchFaceService {
          * 日付部分のPaint
          */
         Paint mDatePaint;
+        Paint mBattTextPaint;
+
+        boolean mIsBattShowing;
+
         boolean mAmbient;
         Time mTime;
         final BroadcastReceiver mTimeZoneReceiver = new BroadcastReceiver() {
@@ -163,6 +167,8 @@ public class MyWatchFace extends CanvasWatchFaceService {
             mSeparatorPaint = createTextPaint(digitalTextColor, Paint.Align.CENTER);
 
             mDatePaint = createTextPaint(digitalTextColor, Paint.Align.CENTER);
+
+            mBattTextPaint = createTextPaint(digitalTextColor, Paint.Align.CENTER);
 
             mRedClockMarkPaint = createClockMarkPaint(Color.RED, Paint.Style.FILL);
             mYellowClockMarkPaint = createClockMarkPaint(Color.YELLOW, Paint.Style.FILL);
@@ -247,12 +253,16 @@ public class MyWatchFace extends CanvasWatchFaceService {
                     ? R.dimen.digital_text_size_round : R.dimen.digital_text_size);
             // 日付部分のサイズ
             float dateSize = res.getDimension(isRound ? R.dimen.date_text_size_round : R.dimen.date_text_size_sq);
+            // バッテリーレベルのサイズ
+            float battSize = res.getDimension(isRound ? R.dimen.batt_text_size_ro : R.dimen.batt_text_size_sq);
 
             mHourPaint.setTextSize(textSize);
             mMinutesPaint.setTextSize(textSize);
             mSeparatorPaint.setTextSize(textSize);
 
             mDatePaint.setTextSize(dateSize);
+
+            mBattTextPaint.setTextSize(battSize);
         }
 
         @Override
@@ -276,6 +286,7 @@ public class MyWatchFace extends CanvasWatchFaceService {
                     mHourPaint.setAntiAlias(!inAmbientMode);
                     mMinutesPaint.setAntiAlias(!inAmbientMode);
                     mDatePaint.setAntiAlias(!inAmbientMode);
+                    mBattTextPaint.setAntiAlias(!inAmbientMode);
                 }
                 invalidate();
             }
@@ -301,9 +312,9 @@ public class MyWatchFace extends CanvasWatchFaceService {
                     break;
                 case TAP_TYPE_TAP:
                     // The user has completed the tap gesture.
-                    mTapCount++;
-                    mBackgroundPaint.setColor(resources.getColor(mTapCount % 2 == 0 ?
-                            R.color.background : R.color.background2));
+                    mIsBattShowing = !mIsBattShowing;
+                    mBackgroundPaint.setColor(resources.getColor(mIsBattShowing ?
+                            R.color.background2 : R.color.background));
                     break;
             }
             invalidate();
@@ -362,10 +373,12 @@ public class MyWatchFace extends CanvasWatchFaceService {
             rotation.setMinuteHand(min * minRotationUnit);
             rotation.setHourHand(hourH * 5f * minRotationUnit);
 
-            String tag = this.getClass().getSimpleName();
-            Log.d(tag, "時間回転角 = " + String.valueOf(rotation.getHourHand()));
-            Log.d(tag, "分回転角 = " + String.valueOf(rotation.getMinuteHand()));
-            Log.d(tag, "秒回転角 = " + String.valueOf(rotation.getSecondHand()));
+            if (BuildConfig.DEBUG) {
+                String tag = this.getClass().getSimpleName();
+                Log.d(tag, "時間回転角 = " + String.valueOf(rotation.getHourHand()));
+                Log.d(tag, "分回転角 = " + String.valueOf(rotation.getMinuteHand()));
+                Log.d(tag, "秒回転角 = " + String.valueOf(rotation.getSecondHand()));
+            }
 
             return rotation;
         }
@@ -444,6 +457,10 @@ public class MyWatchFace extends CanvasWatchFaceService {
             float dateX = centerX;
             float dateY = separatorY + mDatePaint.getTextSize() + res.getDimension(R.dimen.date_x_offset_spacing);
 
+            // 5. バッテリーレベル
+            float battX = centerX;
+            float battY = dateY + mBattTextPaint.getTextSize() + res.getDimension(R.dimen.date_x_offset_spacing);
+
             String hh = String.format(Locale.US, "%02d", mTime.hour);
             String mm = String.format(Locale.US, "%02d", mTime.minute);
 
@@ -462,6 +479,18 @@ public class MyWatchFace extends CanvasWatchFaceService {
             String dateTxt = sdf.format(calendar.getTime());
 
             canvas.drawText(dateTxt, dateX, dateY, mDatePaint);
+
+            // バッテリーレベルを描画
+            if (mIsBattShowing && !isInAmbientMode()) {
+                MyWearApplication app = (MyWearApplication) getApplication();
+
+                String level = app.getBatteryLevel() == -1 ?
+                        res.getString(R.string.unknown) :
+                        String.valueOf(app.getBatteryLevel()) + "%";
+
+                String text = res.getString(R.string.batt_caption) + " " + level;
+                canvas.drawText(text, battX, battY, mBattTextPaint);
+            }
 
             // アナログ部分の描画
             drawBasicAnalogFace(canvas, bounds);

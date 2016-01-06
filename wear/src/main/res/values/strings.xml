@@ -1,4 +1,8 @@
 <resources>
     <string name="app_name">MirageWatch</string>
     <string name="my_digital_name">Mirage Watch</string>
+
+    <string name="batt_caption">Handheld Batt. :</string>
+    <string name="unknown">Unknown</string>
+
 </resources>

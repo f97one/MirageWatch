@@ -9,6 +9,9 @@
     <dimen name="date_text_size_sq">16dp</dimen>
     <dimen name="date_text_size_round">24dp</dimen>
 
+    <dimen name="batt_text_size_sq">14dp</dimen>
+    <dimen name="batt_text_size_ro">18dp</dimen>
+
     <dimen name="date_x_offset_spacing">2dp</dimen>
 
     <dimen name="inner_clock_face_radius_offset">12dp</dimen>
