@@ -31,9 +31,9 @@ public class MyApplication extends Application {
      *
      * @return 残存バッテリーレベル
      */
-    public double getCurrentRemainLevel() {
+    public int getCurrentRemainLevel() {
         // 初期値のままの場合は、Preferenceの値の取得を試みる
-        if (mCurrentRemainLevel == -1f) {
+        if (mCurrentRemainLevel == -1) {
             SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
             mCurrentRemainLevel = pref.getInt(mPrefKeyBatteryLevel, 0);
         }
