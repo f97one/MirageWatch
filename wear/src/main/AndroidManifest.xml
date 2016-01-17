@@ -38,7 +38,7 @@
         </service>
 
         <service
-            android:name=".HandheldBattLevelReceiverService"
+            android:name=".HandheldMsgReceiverService"
             android:enabled="true">
             <intent-filter>
                 <action android:name="com.google.android.gms.wearable.BIND_LISTENER"/>

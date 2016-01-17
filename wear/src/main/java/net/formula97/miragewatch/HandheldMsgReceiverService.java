@@ -8,7 +8,7 @@ import com.google.android.gms.wearable.WearableListenerService;
 /**
  * Created by f97one on 2016/01/04.
  */
-public class HandheldBattLevelReceiverService extends WearableListenerService {
+public class HandheldMsgReceiverService extends WearableListenerService {
     @Override
     public void onMessageReceived(MessageEvent messageEvent) {
         super.onMessageReceived(messageEvent);
