@@ -33,8 +33,6 @@ public class WearableMsgReceiverService extends WearableListenerService {
                     Intent i = registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
                     String battLevel = String.valueOf(i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1));
 
-                    String tag = BattLevelCaptureService.class.getSimpleName();
-
                     NodeApi.GetConnectedNodesResult connectedNodesResult = Wearable.NodeApi.getConnectedNodes(mApiClient).await();
                     for (Node node : connectedNodesResult.getNodes()) {
                         MessageApi.SendMessageResult result = Wearable.MessageApi.sendMessage(
@@ -45,9 +43,9 @@ public class WearableMsgReceiverService extends WearableListenerService {
                                 .await();
 
                         if (result.getStatus().isSuccess()) {
-                            Log.d(tag, "バッテリーレベルの送信に成功");
+                            Log.d(sTag, "バッテリーレベルの送信に成功");
                         } else {
-                            Log.d(tag, "バッテリーレベルの送信に失敗 (" + result.getStatus().getStatusMessage() + ")");
+                            Log.d(sTag, "バッテリーレベルの送信に失敗 (" + result.getStatus().getStatusMessage() + ")");
                         }
                     }
                 }

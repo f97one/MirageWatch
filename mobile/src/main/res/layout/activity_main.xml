@@ -36,37 +36,33 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@+id/caption1"
-        android:text="@string/caption_current_service_condition"/>
+        android:layout_marginTop="8dp"
+        android:text="@string/watch_face_style"/>
 
-    <TextView
-        android:id="@+id/currentCondition"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/caption1"
-        android:layout_marginStart="4dp"
-        android:layout_toRightOf="@id/caption2"
-        android:text="@string/running"/>
-
-    <CheckBox
-        android:id="@+id/enableOnBoot"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/caption2"
-        android:text="@string/caption_enable_on_boot"/>
-
-    <TextView
-        android:id="@+id/descOnBoot"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/enableOnBoot"/>
-
-    <Button
-        android:id="@+id/startServiceBtn"
+    <RadioGroup
+        android:id="@+id/watchModeGroup"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@id/descOnBoot"
-        android:text="@string/start_service"
-        />
+        android:layout_below="@+id/caption1"
+        android:layout_marginTop="8dp"
+        android:layout_toEndOf="@+id/caption2"
+        android:orientation="vertical">
+
+        <RadioButton
+            android:id="@+id/digitalModeBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="@string/preferred_digital"/>
+
+        <RadioButton
+            android:id="@+id/analogModeBtn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:checked="false"
+            android:text="@string/preferred_analog"/>
+
+    </RadioGroup>
 
     <com.google.android.gms.ads.AdView
         android:id="@+id/adView"
