@@ -10,5 +10,6 @@
     <string name="start_service">Start Service</string>
     <string name="start_correction">At the same time of start-up of the device, App will begin the collection of battery information.</string>
     <string name="correct_manually">You need to start collection of battery information with this screen.</string>
+    <string name="ad_unit_id">ca-app-pub-4987945318994685/1438944452</string>
 
 </resources>

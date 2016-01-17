@@ -16,6 +16,9 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.TextView;
 
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
+
 import java.util.List;
 
 import butterknife.Bind;
@@ -37,6 +40,8 @@ public class MainActivity extends AppCompatActivity {
     TextView descOnBoot;
     @Bind(R.id.startServiceBtn)
     Button startServiceBtn;
+    @Bind(R.id.adView)
+    AdView adView;
 
     private boolean mSvcStarted;
 
@@ -69,6 +74,12 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         ButterKnife.bind(this);
+
+        AdRequest.Builder builder = new AdRequest.Builder();
+        if (BuildConfig.DEBUG) {
+            builder.addTestDevice("8D958583B37665C802471B0DAD53C1E1");
+        }
+        adView.loadAd(builder.build());
     }
 
     @OnCheckedChanged(R.id.enableOnBoot)
@@ -135,6 +146,8 @@ public class MainActivity extends AppCompatActivity {
         manager.registerReceiver(mBatteryLevelUpdated, new IntentFilter(BattLevelCaptureService.ACTION_BATTERY_LEVEL_RECEIVED));
 
         registerReceiver(mServiceStateUpdated, new IntentFilter(ACTION_SERVICE_STATE_UPDATED));
+
+        adView.resume();
     }
 
     private void setButtonCaption() {
@@ -162,6 +175,8 @@ public class MainActivity extends AppCompatActivity {
         manager.unregisterReceiver(mBatteryLevelUpdated);
 
         unregisterReceiver(mServiceStateUpdated);
+
+        adView.pause();
     }
 
     private boolean isServiceRunning() {
