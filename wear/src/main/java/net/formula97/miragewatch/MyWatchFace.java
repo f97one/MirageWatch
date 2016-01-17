@@ -40,6 +40,13 @@ import android.view.Gravity;
 import android.view.SurfaceHolder;
 import android.view.WindowInsets;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.wearable.MessageApi;
+import com.google.android.gms.wearable.Node;
+import com.google.android.gms.wearable.NodeApi;
+import com.google.android.gms.wearable.Wearable;
+
 import java.lang.ref.WeakReference;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -63,6 +70,53 @@ public class MyWatchFace extends CanvasWatchFaceService {
      * Handler message id for updating the time periodically in interactive mode.
      */
     private static final int MSG_UPDATE_TIME = 0;
+
+    private GoogleApiClient mApiClient;
+    /**
+     * Google API Clientで接続成功した時のコールバック。
+     */
+    private GoogleApiClient.ConnectionCallbacks mConnectionCallback = new GoogleApiClient.ConnectionCallbacks() {
+        @Override
+        public void onConnected(Bundle bundle) {
+
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    NodeApi.GetConnectedNodesResult connectedNodesResult = Wearable.NodeApi.getConnectedNodes(mApiClient).await();
+                    String tag = MyWatchFace.class.getSimpleName();
+                    for (Node node : connectedNodesResult.getNodes()) {
+                        MessageApi.SendMessageResult result = Wearable.MessageApi.sendMessage(
+                                mApiClient,
+                                node.getId(),
+                                "/RequestBatteryLevel",
+                                "RequestBatteryLevel".getBytes())
+                                .await();
+
+                        if (result.getStatus().isSuccess()) {
+                            Log.d(tag, "バッテリーレベル要求の送信に成功");
+                        } else {
+                            Log.d(tag, "バッテリーレベル要求の送信に失敗 (" + result.getStatus().getStatusMessage() + ")");
+                        }
+                    }
+                }
+            }).start();
+        }
+
+        @Override
+        public void onConnectionSuspended(int i) {
+
+        }
+
+    };
+    /**
+     * Google API Clientで接続失敗した時のコールバック。
+     */
+    private GoogleApiClient.OnConnectionFailedListener mConnFailedCallback = new GoogleApiClient.OnConnectionFailedListener() {
+        @Override
+        public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+
+        }
+    };
 
     @Override
     public Engine onCreateEngine() {
@@ -325,6 +379,14 @@ public class MyWatchFace extends CanvasWatchFaceService {
             // 現在時刻にアップデートする
             mTime.setToNow();
 
+            // Interactive時だけハンドヘルドに接続
+            if (!isInAmbientMode()) {
+                mApiClient = new GoogleApiClient.Builder(
+                        getApplicationContext(), mConnectionCallback, mConnFailedCallback
+                ).addApi(Wearable.API).build();
+                mApiClient.connect();
+            }
+
             drawDigitalFace(canvas, bounds);
         }
 
@@ -549,8 +611,8 @@ public class MyWatchFace extends CanvasWatchFaceService {
          * アナログ表示用針のBitmapを生成する。
          *
          * @param handType 針の種別
-         * @param bounds 描画可能範囲
-         * @param color 描画する色
+         * @param bounds   描画可能範囲
+         * @param color    描画する色
          * @return アナログ表示用針のBitmap
          */
         private Bitmap createHand(int handType, Rect bounds, int color) {
@@ -628,6 +690,5 @@ public class MyWatchFace extends CanvasWatchFaceService {
         }
 
     }
-
 
 }
