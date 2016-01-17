@@ -12,7 +12,6 @@ import android.preference.PreferenceManager;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
-import android.util.Log;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.TextView;
@@ -22,12 +21,12 @@ import java.util.List;
 import butterknife.Bind;
 import butterknife.ButterKnife;
 import butterknife.OnCheckedChanged;
-import butterknife.OnClick;
 
 public class MainActivity extends AppCompatActivity {
 
     public static final String ACTION_SERVICE_STATE_UPDATED = MainActivity.class.getName() + ".ACTION_SERVICE_STATE_UPDATED";
     private final String sTag = this.getClass().getSimpleName();
+
     @Bind(R.id.batteryLevel)
     TextView batteryLevel;
     @Bind(R.id.currentCondition)
@@ -38,7 +37,9 @@ public class MainActivity extends AppCompatActivity {
     TextView descOnBoot;
     @Bind(R.id.startServiceBtn)
     Button startServiceBtn;
+
     private boolean mSvcStarted;
+
     private BroadcastReceiver mBatteryLevelUpdated = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -80,26 +81,26 @@ public class MainActivity extends AppCompatActivity {
         descOnBoot.setText(descId);
     }
 
-    @OnClick(R.id.startServiceBtn)
-    void startServiceBtnClicked() {
-        Intent intent = new Intent(this, ReceiverEnablerService.class);
-
-        if (mSvcStarted) {
-            sendBroadcast(new Intent(WatchdogService.ACTION_START_SHUTDOWN));
-            Log.d(sTag, "WatchdogのUnbind指示を送信");
-
-            if (stopService(intent)) {
-                mSvcStarted = false;
-            }
-        } else {
-            if (startService(intent) != null) {
-                mSvcStarted = true;
-            }
-        }
-
-        setServiceCondition();
-        setButtonCaption();
-    }
+//    @OnClick(R.id.startServiceBtn)
+//    void startServiceBtnClicked() {
+//        Intent intent = new Intent(this, ReceiverEnablerService.class);
+//
+//        if (mSvcStarted) {
+//            sendBroadcast(new Intent(WatchdogService.ACTION_START_SHUTDOWN));
+//            Log.d(sTag, "WatchdogのUnbind指示を送信");
+//
+//            if (stopService(intent)) {
+//                mSvcStarted = false;
+//            }
+//        } else {
+//            if (startService(intent) != null) {
+//                mSvcStarted = true;
+//            }
+//        }
+//
+//        setServiceCondition();
+//        setButtonCaption();
+//    }
 
     @Override
     protected void onResume() {

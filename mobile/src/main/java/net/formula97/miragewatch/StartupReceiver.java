@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
-import android.text.TextUtils;
 
 public class StartupReceiver extends BroadcastReceiver {
     public StartupReceiver() {
@@ -19,10 +18,10 @@ public class StartupReceiver extends BroadcastReceiver {
         if (permitStart) {
             String action = intent.getAction();
 
-            if (!TextUtils.isEmpty(action) && action.equals(Intent.ACTION_BOOT_COMPLETED)) {
-                Intent i = new Intent(context, ReceiverEnablerService.class);
-                context.startService(i);
-            }
+//            if (!TextUtils.isEmpty(action) && action.equals(Intent.ACTION_BOOT_COMPLETED)) {
+//                Intent i = new Intent(context, ReceiverEnablerService.class);
+//                context.startService(i);
+//            }
         }
     }
 }
